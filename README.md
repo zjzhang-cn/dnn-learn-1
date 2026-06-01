@@ -117,16 +117,42 @@ for epoch in range(epochs):
 dnn-learn-1/
 ├── model.py                    # 模型定义、设备选择、数据编码
 ├── train.py                    # 数据生成、训练循环、权重分析
+├── prune.py                    # L1 非结构化剪枝、稀疏度对比
 ├── inference.py                # 模型加载、预测、交互式推理
 ├── requirements.txt            # Python 依赖
 ├── CLAUDE.md                   # Claude Code 项目指引
 └── README.md                   # 本文件
 ```
 
-三个文件各司其职，体现 **模型 / 训练 / 推理** 分离的设计思想：
+四个文件各司其职，体现 **模型 / 训练 / 剪枝 / 推理** 分离的设计思想：
 - `model.py` 是共享核心，不依赖项目内其他文件
 - `train.py` 从 `model` 导入，训练后将权重保存到 `sign_classifier.pth`
+- `prune.py` 加载 `.pth`，执行 L1 非结构化剪枝，对比剪枝前后效果
 - `inference.py` 从 `model` 导入，加载 `.pth` 文件进行预测
+
+## 模型剪枝
+
+支持对训练好的模型进行 L1 非结构化剪枝，移除不重要的权重：
+
+```bash
+# 剪掉 30% 权重（推荐，无精度损失）
+python prune.py --amount 0.3
+
+# 剪掉 50% 权重
+python prune.py --amount 0.5
+
+# 剪掉 90% 权重（极端测试）
+python prune.py --amount 0.9
+```
+
+| 剪枝比例 | 准确率 | 稀疏度 |
+|----------|--------|--------|
+| 0% | 100.00% | 0% |
+| 30% | 100.00% | 30% |
+| 50% | 95.25% | 50% |
+| 90% | 51.00% | 90% |
+
+剪枝后的模型保存为 `sign_classifier_pruned.pth`。
 
 ## 扩展方向
 
