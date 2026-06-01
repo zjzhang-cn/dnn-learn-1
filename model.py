@@ -83,20 +83,25 @@ def print_model(model: nn.Module):
     total = 0
     dummy = torch.zeros(1, 32)
 
-    for name, module in model.named_children():
-        if name == "net" and isinstance(module, nn.Sequential):
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Sequential):
             x = dummy
             for i, child in enumerate(module):
                 class_name = child.__class__.__name__
-                x = child(x)
+                try:
+                    x = child(x)
+                    shape_str = str(list(x.shape))
+                except Exception:
+                    shape_str = "-"
                 params = sum(p.numel() for p in child.parameters())
                 total += params
-                print(f"  [{i:<2}]      {class_name:<18} {str(list(x.shape)):<16} {params:>8,}")
-        else:
-            class_name = module.__class__.__name__
+                print(f"  [{i:<2}]      {class_name:<18} {shape_str:<16} {params:>8,}")
+            break  # Sequential 已处理，不再递归
+        elif isinstance(module, nn.Linear) and name:
+            # 非 Sequential 包裹的独立 Linear 层
             params = sum(p.numel() for p in module.parameters())
             total += params
-            print(f"  {name:<10} {class_name:<18} {'-':<16} {params:>8,}")
+            print(f"  {name:<10} {module.__class__.__name__:<18} {'-':<16} {params:>8,}")
 
     print("-" * 62)
     print(f"{'总计':>46} {total:>8,}")

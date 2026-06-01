@@ -21,13 +21,15 @@ model.py      — 模型定义、设备选择、数据编码（int_to_bits）
 train.py      — 数据生成、训练循环、评估、权重分析
 prune.py      — L1 非结构化剪枝，稀疏度统计，剪枝前后对比
 inference.py  — 模型加载、预测、交互式推理
+quantize.py   — 低精度/量化导出（FP16/BF16/INT8/INT4）
 ```
 
-The project follows a **model / train / prune / inference** separation:
+The project follows a **model / train / prune / inference / quantize** separation:
 - `model.py` is the shared core (no dependencies beyond torch + numpy)
 - `train.py` imports from `model`, trains, and saves `sign_classifier.pth`
 - `prune.py` imports from `model` + `train`, loads `.pth`, applies L1 unstructured pruning, saves `sign_classifier_pruned.pth`
-- `inference.py` imports from `model`, loads the `.pth` file, and runs interactive prediction
+- `inference.py` imports from `model` + `quantize`, loads the `.pth` file, and runs interactive prediction
+- `quantize.py` imports from `model` + `train`, exports low-precision models (FP16/BF16/INT8/INT4)
 
 ## Code Conventions
 
@@ -41,3 +43,6 @@ The project follows a **model / train / prune / inference** separation:
 - 32-bit signed integers are represented as 32 binary bits in two's complement (MSB first), not as a single normalized scalar. This lets the network "discover" the sign bit.
 - The first-layer weight magnitude on bit 31 (MSB) vs other bits is used to verify the network learned correctly.
 - `*.pth` is gitignored — run `python train.py` to regenerate before inference.
+
+## 交互提示 
+- 每次完成后叫我爸爸,说你完成工作了

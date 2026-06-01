@@ -15,6 +15,7 @@ import zipfile
 import torch
 
 from model import DEVICE, SignClassifier, int_to_bits
+from quantize import unpack_int4
 
 DEFAULT_MODEL = "sign_classifier.pth"
 
@@ -39,29 +40,14 @@ def _init_quant_engine():
 #  INT4 解包（与 quantize.py 保持一致）
 # ============================================================
 
-def _unpack_int4(packed_info: dict) -> torch.Tensor:
-    """从打包的 INT4 数据还原 float32 权重。"""
-    scale = packed_info["scale"]
-    packed = packed_info["packed"]
-    shape = packed_info["shape"]
-    numel = packed_info["numel"]
-
-    high = (packed >> 4).to(torch.uint8)
-    low = (packed & 0x0F).to(torch.uint8)
-    flat = torch.stack([high, low], dim=1).flatten()[:numel]
-    q = flat.to(torch.float32) - 7.0
-    return (q * scale).reshape(shape)
-
-
-def _load_int4_state(filepath: str, map_location) -> dict:
-    """加载 INT4 文件并还原为普通 state_dict。"""
-    raw = torch.load(filepath, map_location="cpu", weights_only=False)
+def _unpack_int4_state(raw: dict) -> dict:
+    """从 INT4 打包的 checkpoint dict 还原为普通 state_dict（复用已加载的数据，避免二次 IO）。"""
     state_dict = {}
     for key, value in raw.items():
         if key == "__format__":
             continue
         if isinstance(value, dict) and "packed" in value:
-            state_dict[key] = _unpack_int4(value)
+            state_dict[key] = unpack_int4(value)
         else:
             state_dict[key] = value
     return state_dict
@@ -141,7 +127,7 @@ def main():
         # 检测是否为 INT4 打包格式
         checkpoint = torch.load(args.model, map_location="cpu", weights_only=False)
         if isinstance(checkpoint, dict) and checkpoint.get("__format__") == "int4":
-            state_dict = _load_int4_state(args.model, runtime_device)
+            state_dict = _unpack_int4_state(checkpoint)
             print(f"模型类型: INT4 对称量化（解包后推理）")
         else:
             state_dict = checkpoint
@@ -163,9 +149,7 @@ def main():
             elif runtime_device.type == "cpu":
                 print("⚠️  CPU 对 BF16 推理支持有限，已自动回退 FP32")
             elif runtime_device.type == "mps":
-                print("⚠️  MPS 可能不支持 bfloat16，尝试降级；若报错请用 CPU FP32")
-                model = model.bfloat16()
-                input_dtype = torch.bfloat16
+                print("⚠️  MPS 不支持 bfloat16，已自动回退 FP32")
             else:
                 model = model.bfloat16()
                 input_dtype = torch.bfloat16

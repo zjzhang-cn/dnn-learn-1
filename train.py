@@ -38,14 +38,32 @@ def generate_dataset(n_samples: int = 10000):
 
     从 [-2^31, 2^31-1] 范围内均匀采样，转换为 32 位二进制特征。
     标签: 1 表示 >=0（正/零），0 表示 <0（负）。
+
+    Returns:
+        (X_train, y_train, X_val, y_val) — 80/20 分割
     """
-    values = np.random.randint(-2147483648, 2147483647, size=n_samples)
+    values = np.random.randint(-2147483648, 2147483648, size=n_samples)
 
     X = np.stack([int_to_bits(v) for v in values])          # (N, 32)
     y = (values >= 0).astype(np.float32).reshape(-1, 1)     # (N, 1)
 
     split = int(0.8 * n_samples)
     return X[:split], y[:split], X[split:], y[split:]
+
+
+def generate_validation_data(n_samples: int = 1000):
+    """
+    仅生成验证数据，不产生训练集浪费。
+
+    Returns:
+        (X_val, y_val)
+    """
+    values = np.random.randint(-2147483648, 2147483648, size=n_samples)
+
+    X = np.stack([int_to_bits(v) for v in values])
+    y = (values >= 0).astype(np.float32).reshape(-1, 1)
+
+    return X, y
 
 
 # ============================================================
@@ -113,25 +131,25 @@ def train(
 
 def show_learned_weights(model: nn.Module):
     """打印网络所有层的权重绝对值和 MSB 分析。"""
-    np.set_printoptions(precision=6, linewidth=120, suppress=True, threshold=np.inf)
+    with np.printoptions(precision=6, linewidth=120, suppress=True, threshold=np.inf):
 
-    for i, module in enumerate(model.net):
-        if isinstance(module, nn.Linear):
-            w = module.weight.data.cpu().numpy()
-            b = module.bias.data.cpu().numpy()
-            print(f"\n--- 第 {i} 层: Linear(in={module.in_features}, out={module.out_features}) ---")
-            print(f"权重绝对值 shape={w.shape}:\n{np.abs(w)}")
-            print(f"偏置绝对值 shape={b.shape}:\n{np.abs(b)}")
+        for i, module in enumerate(model.net):
+            if isinstance(module, nn.Linear):
+                w = module.weight.data.cpu().numpy()
+                b = module.bias.data.cpu().numpy()
+                print(f"\n--- 第 {i} 层: Linear(in={module.in_features}, out={module.out_features}) ---")
+                print(f"权重绝对值 shape={w.shape}:\n{np.abs(w)}")
+                print(f"偏置绝对值 shape={b.shape}:\n{np.abs(b)}")
 
-    first_layer = model.net[0]
-    weights = first_layer.weight.data.cpu().numpy()
-    msb_mean_abs = np.abs(weights[:, 0]).mean()
-    others_mean_abs = np.abs(weights[:, 1:]).mean()
-    print(f"\n--- MSB 分析 ---")
-    print(f"bit31 (MSB) 平均权重绝对值: {msb_mean_abs:.4f}")
-    print(f"其余 31 位平均权重绝对值:   {others_mean_abs:.4f}")
-    print(f"MSB 权重是其余位平均的 {msb_mean_abs / (others_mean_abs + 1e-8):.1f} 倍")
-    print("→ 网络已经学会：最高位（符号位）是判断正负的关键特征！")
+        first_layer = model.net[0]
+        weights = first_layer.weight.data.cpu().numpy()
+        msb_mean_abs = np.abs(weights[:, 0]).mean()
+        others_mean_abs = np.abs(weights[:, 1:]).mean()
+        print(f"\n--- MSB 分析 ---")
+        print(f"bit31 (MSB) 平均权重绝对值: {msb_mean_abs:.4f}")
+        print(f"其余 31 位平均权重绝对值:   {others_mean_abs:.4f}")
+        print(f"MSB 权重是其余位平均的 {msb_mean_abs / (others_mean_abs + 1e-8):.1f} 倍")
+        print("→ 网络已经学会：最高位（符号位）是判断正负的关键特征！")
 
 
 # ============================================================

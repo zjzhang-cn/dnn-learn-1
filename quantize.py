@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 
 from model import DEVICE, SignClassifier
-from train import evaluate, generate_dataset
+from train import evaluate, generate_validation_data
 
 MODEL_PATH = "sign_classifier.pth"
 FP16_PATH = "sign_classifier_fp16.pth"
@@ -98,7 +98,6 @@ def pack_int4(weight: torch.Tensor) -> dict:
         numel += 1
 
     # 打包: 两个 uint8→一个 uint8 (高4位|低4位)
-    packed = torch.zeros(numel // 2, dtype=torch.uint8)
     packed = (flat[0::2] << 4) | flat[1::2]
 
     return {
@@ -150,21 +149,21 @@ def main():
     print(f"训练/评估设备: {DEVICE}")
 
     # 1) 加载原始模型
-    print("\n[1/6] 加载原始模型...")
+    print("\n[1/7] 加载原始模型...")
     base_model = SignClassifier().to(DEVICE)
     base_model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
     base_model.eval()
 
     # 2) 准备验证集并评估基线准确率
-    print("[2/6] 准备验证集并评估基线...")
-    _, _, X_val, y_val = generate_dataset(4000)
+    print("[2/7] 准备验证集并评估基线...")
+    X_val, y_val = generate_validation_data(1000)
     X_val_t = torch.from_numpy(X_val).to(DEVICE)
     y_val_t = torch.from_numpy(y_val).to(DEVICE)
     base_metrics = evaluate(base_model, X_val_t, y_val_t)
     print(f"  基线准确率: {base_metrics['acc']:.2%}")
 
     # 3) 导出 FP16 state_dict
-    print("\n[3/6] 导出 FP16 权重...")
+    print("\n[3/7] 导出 FP16 权重...")
     fp16_model = copy.deepcopy(base_model).to("cpu").half().eval()
     torch.save(fp16_model.state_dict(), FP16_PATH)
 
@@ -177,7 +176,7 @@ def main():
     print(f"  FP16(重载后)准确率: {fp16_metrics['acc']:.2%}")
 
     # 3.5) 导出 BF16 state_dict
-    print("\n[4/6] 导出 BF16 权重...")
+    print("\n[4/7] 导出 BF16 权重...")
     bf16_exported = False
     bf16_metrics = None
     try:

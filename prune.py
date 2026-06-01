@@ -20,7 +20,7 @@ import torch.nn.utils.prune as prune
 from torch.utils.data import DataLoader, TensorDataset
 
 from model import DEVICE, SignClassifier, int_to_bits
-from train import evaluate, generate_dataset
+from train import evaluate, generate_validation_data
 
 MODEL_PATH = "sign_classifier.pth"
 PRUNED_PATH = "sign_classifier_pruned.pth"
@@ -138,7 +138,7 @@ def main():
 
     # 2. 准备验证数据
     print("\n[2/4] 准备验证数据...")
-    _, _, X_val, y_val = generate_dataset(4000)
+    X_val, y_val = generate_validation_data(1000)
     X_val_t = torch.from_numpy(X_val).to(DEVICE)
     y_val_t = torch.from_numpy(y_val).to(DEVICE)
 
