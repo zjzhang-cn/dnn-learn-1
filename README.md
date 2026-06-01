@@ -154,6 +154,45 @@ python prune.py --amount 0.9
 
 剪枝后的模型保存为 `sign_classifier_pruned.pth`。
 
+## 低精度与量化保存
+
+支持将模型导出为更小文件：
+
+```bash
+# 导出 FP16 权重 + INT8 动态量化模型
+python quantize.py
+```
+
+导出后会生成：
+- `sign_classifier_fp16.pth`：FP16 权重（体积通常约为 FP32 的 1/2）
+- `sign_classifier_bf16.pth`：BF16 权重（与 FP16 同体积，但数值范围更宽，精度损失更小）
+- `sign_classifier_int8.pth`：INT8 动态量化 TorchScript（体积通常更小）
+- `sign_classifier_int4.pth`：INT4 对称量化（自定义打包，2 个 4 位值 → 1 个字节，约 1/4 体积）
+
+> 注：INT8 动态量化依赖 PyTorch 量化后端（如 qnnpack/fbgemm）。若当前环境不支持，脚本会自动跳过 INT8，仅导出 FP16/BF16。
+
+并打印基线/低精度模型准确率和文件大小对比。
+
+### 推理命令
+
+```bash
+# 原始或剪枝模型（state_dict）
+python inference.py -m sign_classifier.pth
+python inference.py -m sign_classifier_pruned.pth
+
+# FP16 推理（仅在非 CPU 设备上启用）
+python inference.py -m sign_classifier_fp16.pth --fp16-infer
+
+# BF16 推理（需要 CUDA 设备支持 bfloat16）
+python inference.py -m sign_classifier_bf16.pth --bf16-infer
+
+# INT8 动态量化模型（TorchScript）
+python inference.py -m sign_classifier_int8.pth
+
+# INT4 对称量化模型（解包后 FP32 推理）
+python inference.py -m sign_classifier_int4.pth
+```
+
 ## 扩展方向
 
 理解本示例后，可以尝试：
