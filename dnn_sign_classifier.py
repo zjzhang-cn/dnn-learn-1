@@ -85,7 +85,7 @@ class SignClassifier(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(16, 32),   # 输入层: 16 位 → 32 维
+            nn.Linear(16, 32),   # 输入层: 16 位 → 32 维。
             nn.ReLU(),
             nn.Dropout(0.2),
 
@@ -169,7 +169,8 @@ def predict(model: nn.Module, value: int) -> tuple[bool, float]:
         (is_positive, confidence): 是否为正数，以及置信度 [0, 1]
     """
     model.eval()
-    bits = torch.from_numpy(int_to_bits(value)).unsqueeze(0).to(DEVICE)  # (1, 16)
+    bits = torch.from_numpy(int_to_bits(value)).unsqueeze(
+        0).to(DEVICE)  # (1, 16)
     prob = model(bits).item()
     is_positive = prob >= 0.5
     confidence = prob if is_positive else (1.0 - prob)
@@ -180,18 +181,60 @@ def predict(model: nn.Module, value: int) -> tuple[bool, float]:
 #  5. 权重可视化
 # ============================================================
 
+def print_model(model: nn.Module):
+    """打印模型结构概览，逐层显示输入输出形状和参数量。"""
+    print("\n" + "=" * 62)
+    print(f"{'层名':<12} {'类型':<18} {'输出形状':<16} {'参数量':>8}")
+    print("-" * 62)
+
+    total = 0
+    # 构造一个 dummy 输入来计算每层的输出形状
+    dummy = torch.zeros(1, 16)
+
+    for name, module in model.named_children():
+        if name == "net" and isinstance(module, nn.Sequential):
+            # 展开 Sequential 内部的子层
+            x = dummy
+            for i, child in enumerate(module):
+                class_name = child.__class__.__name__
+                x = child(x)
+                params = sum(p.numel() for p in child.parameters())
+                total += params
+                print(
+                    f"  [{i:<2}]      {class_name:<18} {str(list(x.shape)):<16} {params:>8,}")
+        else:
+            class_name = module.__class__.__name__
+            params = sum(p.numel() for p in module.parameters())
+            total += params
+            print(f"  {name:<10} {class_name:<18} {'-':<16} {params:>8,}")
+
+    print("-" * 62)
+    print(f"{'总计':>46} {total:>8,}")
+    print("=" * 62)
+
+
 def show_learned_weights(model: nn.Module):
-    """打印第一层权重中对应 MSB（最高位）的连接强度，验证网络学到了什么。"""
+    """打印网络所有层的权重和偏置数据。"""
+    np.set_printoptions(precision=6, linewidth=120,
+                        suppress=True, threshold=np.inf)
+
+    for i, module in enumerate(model.net):
+        if isinstance(module, nn.Linear):
+            w = module.weight.data.cpu().numpy()
+            b = module.bias.data.cpu().numpy()
+            in_feat, out_feat = module.in_features, module.out_features
+            # print(f"\n--- 第 {i} 层: Linear(in={in_feat}, out={out_feat}) ---")
+            # print(f"权重绝对值 shape={w.shape}:\n{np.abs(w)}")
+            # print(f"偏置绝对值 shape={b.shape}:\n{np.abs(b)}")
+
+    # 分析第一层 MSB 连接强度
     first_layer = model.net[0]  # nn.Linear(16, 32)
     weights = first_layer.weight.data.cpu().numpy()  # shape (32, 16)
-
-    # 第 0 列 = MSB (bit15)，其他列为低位
-    msb_mean_abs = np.abs(weights[:, 0]).mean()
-    others_mean_abs = np.abs(weights[:, 1:]).mean()
-
-    print("\n--- 第一层权重分析 ---")
-    print(f"16 个输入位中，bit15 (MSB) 的平均权重绝对值: {msb_mean_abs:.4f}")
-    print(f"其余 15 个位的平均权重绝对值:              {others_mean_abs:.4f}")
+    msb_mean_abs = np.abs(weights[:, 0]).mean()  # 第0列是 MSB（最高位），我们关注它的权重绝对值平均值
+    others_mean_abs = np.abs(weights[:, 1:]).mean()  # 第0列是 MSB，剩下 15 列是其他位
+    print(f"\n--- MSB 分析 ---")
+    print(f"bit15 (MSB) 平均权重绝对值: {msb_mean_abs:.4f}")
+    print(f"其余 15 位平均权重绝对值:   {others_mean_abs:.4f}")
     print(f"MSB 权重是其余位平均的 {msb_mean_abs / (others_mean_abs + 1e-8):.1f} 倍")
     print("→ 网络已经学会：最高位（符号位）是判断正负的关键特征！")
 
@@ -214,9 +257,7 @@ def main():
     # ---- 创建模型 ----
     print("\n[2/3] 创建模型...")
     model = SignClassifier()
-    n_params = sum(p.numel() for p in model.parameters())
-    print(f"  模型结构: 16 → 32 → 16 → 1")
-    print(f"  可训练参数: {n_params}")
+    print_model(model)
 
     # ---- 训练 ----
     print("\n[3/3] 开始训练...")
@@ -264,7 +305,8 @@ def main():
 
             correct = (value >= 0) == is_positive
             mark = "✅" if correct else "❌"
-            print(f"  预测: {prediction}  |  实际: {actual}  |  置信度: {conf:.2%}  {mark}")
+            print(
+                f"  预测: {prediction}  |  实际: {actual}  |  置信度: {conf:.2%}  {mark}")
 
         except ValueError:
             print("⚠️  请输入有效的整数")
