@@ -4,14 +4,18 @@ DNN 符号分类器 - 推理脚本
 加载已训练模型，交互式判断 32 位有符号整数的正负。
 
 用法：
-    python inference.py
+    python inference.py                        # 加载原始模型
+    python inference.py --model sign_classifier_pruned.pth   # 加载剪枝模型
+    python inference.py -m sign_classifier_pruned.pth         # 简写
 """
+
+import argparse
 
 import torch
 
 from model import DEVICE, SignClassifier, int_to_bits
 
-MODEL_PATH = "sign_classifier.pth"
+DEFAULT_MODEL = "sign_classifier.pth"
 
 
 # ============================================================
@@ -38,14 +42,23 @@ def predict(model: torch.nn.Module, value: int) -> tuple[bool, float]:
 # ============================================================
 
 def main():
+    parser = argparse.ArgumentParser(description="加载模型并交互式判断整数正负")
+    parser.add_argument(
+        "--model", "-m",
+        type=str,
+        default=DEFAULT_MODEL,
+        help=f"模型文件路径（默认: {DEFAULT_MODEL}）",
+    )
+    args = parser.parse_args()
+
     print(f"使用设备: {DEVICE}")
 
     # 加载模型
     model = SignClassifier()
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+    model.load_state_dict(torch.load(args.model, map_location=DEVICE))
     model.to(DEVICE)
     model.eval()
-    print(f"模型已从 {MODEL_PATH} 加载\n")
+    print(f"模型已从 {args.model} 加载\n")
 
     # 交互式推理
     print("=" * 50)
