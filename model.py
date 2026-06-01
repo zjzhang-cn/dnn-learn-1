@@ -1,8 +1,8 @@
 """
 DNN 符号分类器 - 模型定义
 =========================
-三层全连接网络：16 → 32 → 16 → 1
-判断 16 位有符号整数是正数还是负数。
+三层全连接网络：32 → 64 → 32 → 1
+判断 32 位有符号整数是正数还是负数。
 """
 
 import numpy as np
@@ -26,17 +26,17 @@ else:
 
 def int_to_bits(value: int) -> np.ndarray:
     """
-    将 16 位有符号整数转换为 16 个二进制特征（MSB 在前）。
+    将 32 位有符号整数转换为 32 个二进制特征（MSB 在前）。
 
     使用 two's complement 的位模式：
       - 非负数: MSB = 0，其余位为数值的二进制表示
       - 负数:   MSB = 1，其余位为补码表示
 
     Returns:
-        shape (16,) 的 float32 数组，每个元素为 0.0 或 1.0
+        shape (32,) 的 float32 数组，每个元素为 0.0 或 1.0
     """
-    unsigned = value & 0xFFFF
-    bits = [(unsigned >> (15 - i)) & 1 for i in range(16)]
+    unsigned = value & 0xFFFFFFFF
+    bits = [(unsigned >> (31 - i)) & 1 for i in range(32)]
     return np.array(bits, dtype=np.float32)
 
 
@@ -46,7 +46,7 @@ def int_to_bits(value: int) -> np.ndarray:
 
 class SignClassifier(nn.Module):
     """
-    三层全连接网络：16 → 32 → 16 → 1
+    三层全连接网络：32 → 64 → 32 → 1
 
     虽然这个问题理论上一个神经元就能解决（只看 MSB），
     但多层结构可以演示 DNN 的典型设计模式。
@@ -55,14 +55,14 @@ class SignClassifier(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(16, 32),   # 输入层: 16 位 → 32 维
+            nn.Linear(32, 64),   # 输入层: 32 位 → 64 维
             nn.ReLU(),
             nn.Dropout(0.2),
 
-            nn.Linear(32, 16),   # 隐藏层: 32 → 16
+            nn.Linear(64, 32),   # 隐藏层: 64 → 32
             nn.ReLU(),
 
-            nn.Linear(16, 1),    # 输出层: 16 → 1
+            nn.Linear(32, 1),    # 输出层: 32 → 1
             nn.Sigmoid(),        # 映射到 [0, 1]，表示 P(正数)
         )
 
@@ -81,7 +81,7 @@ def print_model(model: nn.Module):
     print("-" * 62)
 
     total = 0
-    dummy = torch.zeros(1, 16)
+    dummy = torch.zeros(1, 32)
 
     for name, module in model.named_children():
         if name == "net" and isinstance(module, nn.Sequential):

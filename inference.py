@@ -1,7 +1,7 @@
 """
 DNN 符号分类器 - 推理脚本
 =========================
-加载已训练模型，交互式判断 16 位有符号整数的正负。
+加载已训练模型，交互式判断 32 位有符号整数的正负。
 
 用法：
     python inference.py
@@ -49,8 +49,8 @@ def main():
 
     # 交互式推理
     print("=" * 50)
-    print("交互式推理 — 输入 16 位有符号整数，模型判断正负")
-    print("范围: [-32768, 32767]，输入 q 退出")
+    print("交互式推理 — 输入 32 位有符号整数，模型判断正负")
+    print("范围: [-2147483648, 2147483647]，输入 q 退出")
     print("=" * 50)
 
     while True:
@@ -61,8 +61,8 @@ def main():
                 break
 
             value = int(user_input)
-            if value < -32768 or value > 32767:
-                print("⚠️  超出 16 位有符号整数范围，请重试")
+            if value < -2147483648 or value > 2147483647:
+                print("⚠️  超出 32 位有符号整数范围，请重试")
                 continue
 
             is_positive, conf = predict(model, value)

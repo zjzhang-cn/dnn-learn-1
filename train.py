@@ -36,12 +36,12 @@ def generate_dataset(n_samples: int = 10000):
     """
     生成训练/验证数据集。
 
-    从 [-32768, 32767] 范围内均匀采样，转换为 16 位二进制特征。
+    从 [-2^31, 2^31-1] 范围内均匀采样，转换为 32 位二进制特征。
     标签: 1 表示 >=0（正/零），0 表示 <0（负）。
     """
-    values = np.random.randint(-32768, 32768, size=n_samples)
+    values = np.random.randint(-2147483648, 2147483647, size=n_samples)
 
-    X = np.stack([int_to_bits(v) for v in values])          # (N, 16)
+    X = np.stack([int_to_bits(v) for v in values])          # (N, 32)
     y = (values >= 0).astype(np.float32).reshape(-1, 1)     # (N, 1)
 
     split = int(0.8 * n_samples)
@@ -128,8 +128,8 @@ def show_learned_weights(model: nn.Module):
     msb_mean_abs = np.abs(weights[:, 0]).mean()
     others_mean_abs = np.abs(weights[:, 1:]).mean()
     print(f"\n--- MSB 分析 ---")
-    print(f"bit15 (MSB) 平均权重绝对值: {msb_mean_abs:.4f}")
-    print(f"其余 15 位平均权重绝对值:   {others_mean_abs:.4f}")
+    print(f"bit31 (MSB) 平均权重绝对值: {msb_mean_abs:.4f}")
+    print(f"其余 31 位平均权重绝对值:   {others_mean_abs:.4f}")
     print(f"MSB 权重是其余位平均的 {msb_mean_abs / (others_mean_abs + 1e-8):.1f} 倍")
     print("→ 网络已经学会：最高位（符号位）是判断正负的关键特征！")
 

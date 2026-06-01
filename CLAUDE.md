@@ -38,6 +38,6 @@ The project follows a **model / train / prune / inference** separation:
 
 ## Key Technical Notes
 
-- 16-bit signed integers are represented as 16 binary bits in two's complement (MSB first), not as a single normalized scalar. This lets the network "discover" the sign bit.
-- The first-layer weight magnitude on bit 15 (MSB) vs other bits is used to verify the network learned correctly.
+- 32-bit signed integers are represented as 32 binary bits in two's complement (MSB first), not as a single normalized scalar. This lets the network "discover" the sign bit.
+- The first-layer weight magnitude on bit 31 (MSB) vs other bits is used to verify the network learned correctly.
 - `*.pth` is gitignored — run `python train.py` to regenerate before inference.
