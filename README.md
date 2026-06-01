@@ -25,13 +25,16 @@
 # 1. 安装依赖
 pip install -r requirements.txt
 
-# 2. 运行程序
-python dnn_sign_classifier.py
+# 2. 训练模型
+python train.py
+
+# 3. 运行推理（交互式）
+python inference.py
 ```
 
 程序会自动：
 1. 生成 20000 条训练数据
-2. 构建并训练神经网络
+2. 构建并训练神经网络，保存模型到 `sign_classifier.pth`
 3. 打印权重分析（展示网络学会了 MSB 是关键特征）
 4. 进入交互模式，等待用户输入整数进行预测
 
@@ -112,11 +115,18 @@ for epoch in range(epochs):
 
 ```
 dnn-learn-1/
-├── requirements.txt           # Python 依赖
-├── dnn_sign_classifier.py     # DNN 符号分类器（完整实现）
-├── CLAUDE.md                  # Claude Code 项目指引
-└── README.md                  # 本文件
+├── model.py                    # 模型定义、设备选择、数据编码
+├── train.py                    # 数据生成、训练循环、权重分析
+├── inference.py                # 模型加载、预测、交互式推理
+├── requirements.txt            # Python 依赖
+├── CLAUDE.md                   # Claude Code 项目指引
+└── README.md                   # 本文件
 ```
+
+三个文件各司其职，体现 **模型 / 训练 / 推理** 分离的设计思想：
+- `model.py` 是共享核心，不依赖项目内其他文件
+- `train.py` 从 `model` 导入，训练后将权重保存到 `sign_classifier.pth`
+- `inference.py` 从 `model` 导入，加载 `.pth` 文件进行预测
 
 ## 扩展方向
 
