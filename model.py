@@ -84,29 +84,24 @@ class SignClassifier(nn.Module):
 
 class ParityClassifier(nn.Module):
     """
-    奇偶判断网络：32 → 128 → 64 → 32 → 1
+    奇偶判断网络：32 → 64 → 32 → 1
 
-    比符号分类器更深更宽——因为奇偶判断需要学习 LSB（最低位），
-    输入中没有任何一位直接决定奇偶性，网络需要理解二进制位权重的概念。
+    和符号分类器结构相同——奇偶判断本质上也是单 bit 问题（看 LSB），
+    网络只需学会把注意力从 MSB 转移到 LSB 上即可。
     """
 
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(32, 128),
+            nn.Linear(32, 64),   # 输入层: 32 位 → 64 维
             nn.ReLU(),
-            nn.BatchNorm1d(128),
             nn.Dropout(0.2),
 
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.BatchNorm1d(64),
-
-            nn.Linear(64, 32),
+            nn.Linear(64, 32),   # 隐藏层: 64 → 32
             nn.ReLU(),
 
-            nn.Linear(32, 1),
-            nn.Sigmoid(),
+            nn.Linear(32, 1),    # 输出层: 32 → 1
+            nn.Sigmoid(),        # 映射到 [0, 1]，表示 P(偶数)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

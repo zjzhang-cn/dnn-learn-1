@@ -26,7 +26,7 @@ torch.manual_seed(SEED)
 MODEL_PATH = "parity_classifier.pth"
 
 
-def train(model, train_loader, X_val, y_val, epochs=50, lr=0.001):
+def train(model, train_loader, X_val, y_val, epochs=30, lr=0.001):
     """训练奇偶判断模型。"""
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -110,7 +110,7 @@ def main():
         train_loader,
         torch.from_numpy(X_val),
         torch.from_numpy(y_val),
-        epochs=50,
+        epochs=30,
         lr=0.001,
     )
 
