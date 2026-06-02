@@ -156,6 +156,71 @@ def generate_power_of_two_dataset(n_samples: int = 10000):
     return X[:split], y[:split], X[split:], y[split:]
 
 
+def generate_abs_compare_dataset(n_samples: int = 10000, threshold: int = 1000):
+    """
+    生成绝对值比较数据集。
+
+    标签: 1 表示 |x| > threshold，0 表示 |x| ≤ threshold。
+    网络需要学会忽略 MSB（符号位），提取数值大小进行比较。
+
+    与符号/奇偶判断不同，决策边界是非线性的——|x| > 1000
+    在图上是两个分离的区域（x > 1000 和 x < -1000）。
+
+    为确保类别平衡，正负样本各约 50%。
+
+    Returns:
+        (X_train, y_train, X_val, y_val) — 80/20 分割
+    """
+    half = n_samples // 2
+
+    # 负样本：|x| ≤ threshold，约 2001 个值，循环采样
+    neg_pool = list(range(-threshold, threshold + 1))
+    neg_indices = np.random.randint(0, len(neg_pool), size=half)
+    neg_values = np.array([neg_pool[i] for i in neg_indices])
+
+    # 正样本：混合边界样本 + 随机样本
+    # 边界样本：threshold+1 ~ threshold+100（高频） + threshold+101 ~ threshold*5
+    # 前者让模型精确学习决策边界
+    boundary_near = list(range(threshold + 1, threshold + 101)) + \
+                    list(range(-(threshold + 100), -(threshold + 1)))
+    boundary_far = list(range(threshold + 101, threshold * 5 + 1)) + \
+                   list(range(-(threshold * 5), -(threshold + 101)))
+
+    n_boundary_near = n_samples // 10  # 10% 近边界（高频重复）
+    n_boundary_far = n_samples // 20   # 5% 远边界
+
+    near_indices = np.random.randint(0, len(boundary_near), size=n_boundary_near)
+    boundary_values = np.array([boundary_near[i] for i in near_indices])
+    far_indices = np.random.randint(0, len(boundary_far), size=n_boundary_far)
+    boundary_values = np.concatenate([
+        boundary_values,
+        np.array([boundary_far[i] for i in far_indices]),
+    ])
+
+    # 随机正样本：|x| > threshold*5，填充剩余
+    n_remaining = half - len(boundary_values)
+    random_pos_values = np.random.randint(-2147483648, 2147483648, size=max(n_remaining * 3, 1000))
+    random_pos_values = np.array([v for v in random_pos_values
+                                  if abs(v) > threshold * 5][:n_remaining])
+
+    pos_values = np.concatenate([boundary_values, random_pos_values])
+
+    values = np.concatenate([pos_values, neg_values])
+    y = np.concatenate([
+        np.ones(half, dtype=np.float32),
+        np.zeros(half, dtype=np.float32),
+    ])
+
+    idx = np.random.permutation(len(values))
+    values, y = values[idx], y[idx]
+
+    X = np.stack([int_to_bits(v) for v in values])
+    y = y.reshape(-1, 1)
+
+    split = int(0.8 * len(values))
+    return X[:split], y[:split], X[split:], y[split:]
+
+
 # ============================================================
 #  评估
 # ============================================================
