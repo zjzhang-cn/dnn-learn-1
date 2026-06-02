@@ -6,3 +6,6 @@ __pycache__/
 venv/
 *.pth
 .vscode/
+*png
+*onnx
+*.onnx.data
