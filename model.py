@@ -56,11 +56,15 @@ def int_to_bits(value: int) -> np.ndarray:
 #  模型
 # ============================================================
 
-class SignClassifier(nn.Module):
+class BitChecker(nn.Module):
     """
-    三层全连接网络：32 → 64 → 32 → 1
+    位检测网络：32 → 64 → 32 → 1
 
-    虽然这个问题理论上一个神经元就能解决（只看 MSB），
+    三层全连接网络，通过训练自动发现输入中哪个 bit 是决定性的。
+    - 符号判断：MSB（bit31）= 输入位 0
+    - 奇偶判断：LSB（bit0） = 输入位 31
+
+    虽然问题本身很简单（单 bit 就能解决），
     但多层结构可以演示 DNN 的典型设计模式。
     """
 
@@ -75,37 +79,16 @@ class SignClassifier(nn.Module):
             nn.ReLU(),
 
             nn.Linear(32, 1),    # 输出层: 32 → 1
-            nn.Sigmoid(),        # 映射到 [0, 1]，表示 P(正数)
+            nn.Sigmoid(),        # 映射到 [0, 1]
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
 
 
-class ParityClassifier(nn.Module):
-    """
-    奇偶判断网络：32 → 64 → 32 → 1
-
-    和符号分类器结构相同——奇偶判断本质上也是单 bit 问题（看 LSB），
-    网络只需学会把注意力从 MSB 转移到 LSB 上即可。
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(32, 64),   # 输入层: 32 位 → 64 维
-            nn.ReLU(),
-            nn.Dropout(0.2),
-
-            nn.Linear(64, 32),   # 隐藏层: 64 → 32
-            nn.ReLU(),
-
-            nn.Linear(32, 1),    # 输出层: 32 → 1
-            nn.Sigmoid(),        # 映射到 [0, 1]，表示 P(偶数)
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
+# 别名，保持向后兼容
+SignClassifier = BitChecker
+ParityClassifier = BitChecker
 
 
 # ============================================================
@@ -161,7 +144,7 @@ def analyze_with_torch_fx():
     try:
         import torch.fx
 
-        model = SignClassifier()
+        model = BitChecker()
         traced_model = torch.fx.symbolic_trace(model)
 
         print("\n" + "=" * 60)
@@ -212,7 +195,7 @@ def export_model_to_onnx(model_path="sign_classifier.onnx", input_shape=(1, 32),
     import torch.onnx
 
     if model is None:
-        model = SignClassifier()
+        model = BitChecker()
     model.eval()
     model.to("cpu")
 
