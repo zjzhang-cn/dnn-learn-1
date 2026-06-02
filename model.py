@@ -82,6 +82,37 @@ class SignClassifier(nn.Module):
         return self.net(x)
 
 
+class ParityClassifier(nn.Module):
+    """
+    奇偶判断网络：32 → 128 → 64 → 32 → 1
+
+    比符号分类器更深更宽——因为奇偶判断需要学习 LSB（最低位），
+    输入中没有任何一位直接决定奇偶性，网络需要理解二进制位权重的概念。
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(32, 128),
+            nn.ReLU(),
+            nn.BatchNorm1d(128),
+            nn.Dropout(0.2),
+
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.BatchNorm1d(64),
+
+            nn.Linear(64, 32),
+            nn.ReLU(),
+
+            nn.Linear(32, 1),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
 # ============================================================
 #  模型结构打印
 # ============================================================
@@ -94,6 +125,8 @@ def print_model(model: nn.Module):
 
     total = 0
     dummy = torch.zeros(1, 32)
+    was_training = model.training
+    model.eval()  # 切换到 eval 模式，避免 BatchNorm 等层对 batch_size 的限制
 
     for name, module in model.named_modules():
         if isinstance(module, nn.Sequential):
@@ -108,12 +141,14 @@ def print_model(model: nn.Module):
                 params = sum(p.numel() for p in child.parameters())
                 total += params
                 print(f"  [{i:<2}]      {class_name:<18} {shape_str:<16} {params:>8,}")
-            break  # Sequential 已处理，不再递归
+            break
         elif isinstance(module, nn.Linear) and name:
-            # 非 Sequential 包裹的独立 Linear 层
             params = sum(p.numel() for p in module.parameters())
             total += params
             print(f"  {name:<10} {module.__class__.__name__:<18} {'-':<16} {params:>8,}")
+
+    if was_training:
+        model.train()  # 恢复原始模式
 
     print("-" * 62)
     print(f"{'总计':>46} {total:>8,}")
