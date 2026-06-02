@@ -11,13 +11,17 @@
 - 训练循环（前向传播 → 损失计算 → 反向传播 → 参数更新）
 - 验证评估（准确率、损失曲线）
 - 权重分析（验证网络学到了什么）
-- 交互式推理
+- 交互式推理（PyTorch / OpenCV）
+- 模型剪枝（L1 非结构化，稀疏度对比）
+- 低精度量化导出（FP16 / BF16 / INT8 / INT4）
+- ONNX 导出与 OpenCV 推理
 
 ## 环境要求
 
 - Python 3.12+
 - PyTorch >= 2.0
 - NumPy >= 1.24
+- 可选：`opencv-python`（OpenCV ONNX 推理）
 
 ## 快速开始
 
@@ -35,8 +39,8 @@ python inference.py
 程序会自动：
 1. 生成 20000 条训练数据
 2. 构建并训练神经网络，保存模型到 `sign_classifier.pth`
-3. 打印权重分析（展示网络学会了 MSB 是关键特征）
-4. 进入交互模式，等待用户输入整数进行预测
+3. 导出 ONNX 模型到 `sign_classifier.onnx`
+4. 打印权重分析（展示网络学会了 MSB 是关键特征）
 
 ## 交互示例
 
@@ -115,20 +119,25 @@ for epoch in range(epochs):
 
 ```
 dnn-learn-1/
-├── model.py                    # 模型定义、设备选择、数据编码
-├── train.py                    # 数据生成、训练循环、权重分析
+├── model.py                    # 模型定义、设备选择、数据编码、ONNX 导出、torch.fx 分析
+├── train.py                    # 数据生成、训练循环、权重分析、自动导出 ONNX
 ├── prune.py                    # L1 非结构化剪枝、稀疏度对比
-├── inference.py                # 模型加载、预测、交互式推理
+├── inference.py                # PyTorch 模型加载、预测、交互式推理（含量化模型）
+├── quantize.py                 # 低精度/量化导出（FP16/BF16/INT8/INT4）
+├── opencv_inference.py         # OpenCV DNN 模块加载 ONNX 进行推理
 ├── requirements.txt            # Python 依赖
 ├── CLAUDE.md                   # Claude Code 项目指引
+├── ROADMAP.md                  # DNN 学习路线图
 └── README.md                   # 本文件
 ```
 
-四个文件各司其职，体现 **模型 / 训练 / 剪枝 / 推理** 分离的设计思想：
-- `model.py` 是共享核心，不依赖项目内其他文件
-- `train.py` 从 `model` 导入，训练后将权重保存到 `sign_classifier.pth`
+各文件各司其职，体现 **模型 / 训练 / 剪枝 / 量化 / 推理** 分离的设计思想：
+- `model.py` 是共享核心，提供设备检测、编码函数、模型定义、ONNX 导出、torch.fx 分析
+- `train.py` 从 `model` 导入，训练后保存 `.pth` 权重并自动导出 `.onnx`
 - `prune.py` 加载 `.pth`，执行 L1 非结构化剪枝，对比剪枝前后效果
-- `inference.py` 从 `model` 导入，加载 `.pth` 文件进行预测
+- `inference.py` 从 `model` + `quantize` 导入，支持 PyTorch 原生模型和量化模型的交互式推理
+- `quantize.py` 从 `model` + `train` 导入，导出 FP16/BF16/INT8/INT4 低精度模型
+- `opencv_inference.py` 使用 OpenCV DNN 加载 ONNX 模型，批量/交互式推理
 
 ## 模型剪枝
 
@@ -173,25 +182,45 @@ python quantize.py
 
 并打印基线/低精度模型准确率和文件大小对比。
 
-### 推理命令
+## ONNX 导出与 OpenCV 推理
+
+训练完成后会自动导出 ONNX 模型，可以使用 PyTorch 或 OpenCV 进行推理：
+
+### PyTorch 推理
 
 ```bash
-# 原始或剪枝模型（state_dict）
+# 原始模型
 python inference.py -m sign_classifier.pth
+
+# 剪枝模型
 python inference.py -m sign_classifier_pruned.pth
 
-# FP16 推理（仅在非 CPU 设备上启用）
+# 量化模型
 python inference.py -m sign_classifier_fp16.pth --fp16-infer
-
-# BF16 推理（需要 CUDA 设备支持 bfloat16）
-python inference.py -m sign_classifier_bf16.pth --bf16-infer
-
-# INT8 动态量化模型（TorchScript）
-python inference.py -m sign_classifier_int8.pth
-
-# INT4 对称量化模型（解包后 FP32 推理）
 python inference.py -m sign_classifier_int4.pth
 ```
+
+### OpenCV 推理
+
+使用 OpenCV DNN 模块加载 ONNX 模型，无需 PyTorch 依赖：
+
+```bash
+# 安装 opencv-python
+pip install opencv-python
+
+# 运行推理
+python opencv_inference.py --model sign_classifier.onnx
+```
+
+```
+             0 → 预测: 正数  实际: 正数  置信度: 99.69%  ✅
+             1 → 预测: 正数  实际: 正数  置信度: 99.81%  ✅
+            -1 → 预测: 负数  实际: 负数  置信度: 100.00%  ✅
+    2147483647 → 预测: 正数  实际: 正数  置信度: 100.00%  ✅
+   -2147483648 → 预测: 负数  实际: 负数  置信度: 99.99%  ✅
+```
+
+> 提示：ONNX 模型可跨平台部署，支持 C++/Java/JavaScript/C# 等语言的 OpenCV、ONNX Runtime 推理。
 
 ## 扩展方向
 
@@ -202,6 +231,8 @@ python inference.py -m sign_classifier_int4.pth
 3. **更复杂的任务**：判断数字的奇偶性、是否为 2 的幂、绝对值是否大于某个阈值等
 4. **CNN 视角**：将 16 位视为 1D 序列，用 Conv1d 处理
 5. **直接输入数值**：改为输入单个归一化后的整数值，对比两种输入方式的区别
+
+更多学习建议见 [ROADMAP.md](ROADMAP.md)。
 
 ## 许可
 
