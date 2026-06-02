@@ -15,7 +15,7 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from model import DEVICE, print_model, BitChecker
+from model import DEVICE, print_model, BitClassifier
 from train import generate_parity_dataset, evaluate
 
 SEED = 42
@@ -100,7 +100,7 @@ def main():
 
     # 2. 创建模型
     print("\n[2/3] 创建模型...")
-    model = BitChecker()
+    model = BitClassifier()
     print_model(model)
 
     # 3. 训练

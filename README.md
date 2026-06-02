@@ -132,7 +132,7 @@ dnn-learn-1/
 ```
 
 各文件各司其职，体现 **模型 / 训练 / 剪枝 / 量化 / 推理** 分离的设计思想：
-- `model.py` 是共享核心，提供设备检测、编码函数、`BitChecker` 模型、ONNX 导出、torch.fx 分析
+- `model.py` 是共享核心，提供设备检测、编码函数、`BitClassifier` 模型、ONNX 导出、torch.fx 分析
 - `train.py` 从 `model` 导入，训练后保存 `.pth` 权重并自动导出 `.onnx`
 - `prune.py` 加载 `.pth`，执行 L1 非结构化剪枝，对比剪枝前后效果
 - `inference.py` 从 `model` + `quantize` 导入，支持 PyTorch 原生模型和量化模型的交互式推理

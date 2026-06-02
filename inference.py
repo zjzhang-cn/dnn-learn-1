@@ -14,7 +14,7 @@ import zipfile
 
 import torch
 
-from model import DEVICE, BitChecker, int_to_bits
+from model import DEVICE, BitClassifier, int_to_bits
 from quantize import unpack_int4
 
 DEFAULT_MODEL = "sign_classifier.pth"
@@ -122,7 +122,7 @@ def main():
     else:
         runtime_device = DEVICE
         input_dtype = torch.float32
-        model = BitChecker()
+        model = BitClassifier()
 
         # 检测是否为 INT4 打包格式
         checkpoint = torch.load(args.model, map_location="cpu", weights_only=False)

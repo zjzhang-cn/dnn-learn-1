@@ -56,7 +56,7 @@ def int_to_bits(value: int) -> np.ndarray:
 #  模型
 # ============================================================
 
-class BitChecker(nn.Module):
+class BitClassifier(nn.Module):
     """
     位检测网络：32 → 64 → 32 → 1
 
@@ -87,8 +87,8 @@ class BitChecker(nn.Module):
 
 
 # 别名，保持向后兼容
-SignClassifier = BitChecker
-ParityClassifier = BitChecker
+SignClassifier = BitClassifier
+ParityClassifier = BitClassifier
 
 
 # ============================================================
@@ -144,7 +144,7 @@ def analyze_with_torch_fx():
     try:
         import torch.fx
 
-        model = BitChecker()
+        model = BitClassifier()
         traced_model = torch.fx.symbolic_trace(model)
 
         print("\n" + "=" * 60)
@@ -195,7 +195,7 @@ def export_model_to_onnx(model_path="sign_classifier.onnx", input_shape=(1, 32),
     import torch.onnx
 
     if model is None:
-        model = BitChecker()
+        model = BitClassifier()
     model.eval()
     model.to("cpu")
 

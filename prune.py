@@ -19,7 +19,7 @@ import torch.nn as nn
 import torch.nn.utils.prune as prune
 from torch.utils.data import DataLoader, TensorDataset
 
-from model import DEVICE, BitChecker, int_to_bits
+from model import DEVICE, BitClassifier, int_to_bits
 from train import evaluate, generate_validation_data
 
 MODEL_PATH = "sign_classifier.pth"
@@ -127,7 +127,7 @@ def main():
 
     # 1. 加载原始模型
     print("\n[1/4] 加载原始模型...")
-    model = BitChecker()
+    model = BitClassifier()
     model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
     model.to(DEVICE)
     original_model = copy.deepcopy(model)

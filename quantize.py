@@ -18,7 +18,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from model import DEVICE, BitChecker
+from model import DEVICE, BitClassifier
 from train import evaluate, generate_validation_data
 
 MODEL_PATH = "sign_classifier.pth"
@@ -139,7 +139,7 @@ def evaluate_int4(model: nn.Module, int4_state: dict, X: torch.Tensor, y: torch.
         else:
             state_dict[key] = value
 
-    temp_model = BitChecker().to(X.device)
+    temp_model = BitClassifier().to(X.device)
     temp_model.load_state_dict(state_dict)
     temp_model.eval()
     return evaluate(temp_model, X, y)
@@ -150,7 +150,7 @@ def main():
 
     # 1) 加载原始模型
     print("\n[1/7] 加载原始模型...")
-    base_model = BitChecker().to(DEVICE)
+    base_model = BitClassifier().to(DEVICE)
     base_model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
     base_model.eval()
 
@@ -168,7 +168,7 @@ def main():
     torch.save(fp16_model.state_dict(), FP16_PATH)
 
     # 为了可比性，按原路径加载并在 float32 上评估精度
-    fp16_reload = BitChecker().to(DEVICE)
+    fp16_reload = BitClassifier().to(DEVICE)
     fp16_reload.load_state_dict(torch.load(FP16_PATH, map_location=DEVICE))
     fp16_reload.eval()
     fp16_metrics = evaluate(fp16_reload, X_val_t, y_val_t)
@@ -183,7 +183,7 @@ def main():
         bf16_model = copy.deepcopy(base_model).to("cpu").bfloat16().eval()
         torch.save(bf16_model.state_dict(), BF16_PATH)
 
-        bf16_reload = BitChecker().to(DEVICE)
+        bf16_reload = BitClassifier().to(DEVICE)
         bf16_reload.load_state_dict(torch.load(BF16_PATH, map_location=DEVICE))
         bf16_reload.eval()
         bf16_metrics = evaluate(bf16_reload, X_val_t, y_val_t)

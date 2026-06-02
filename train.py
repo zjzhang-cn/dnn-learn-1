@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from model import DEVICE, BitChecker, int_to_bits, print_model, export_model_to_onnx
+from model import DEVICE, BitClassifier, int_to_bits, print_model, export_model_to_onnx
 
 # ============================================================
 #  随机种子
@@ -193,7 +193,7 @@ def main():
 
     # 2. 创建模型
     print("\n[2/3] 创建模型...")
-    model = BitChecker()
+    model = BitClassifier()
     print_model(model)
 
     # 3. 训练
