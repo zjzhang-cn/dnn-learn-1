@@ -68,6 +68,26 @@ def generate_validation_data(n_samples: int = 1000):
     return X, y
 
 
+def generate_parity_dataset(n_samples: int = 10000):
+    """
+    生成奇偶判断数据集。
+
+    标签: 1 表示偶数，0 表示奇数。
+    与符号判断不同，奇偶性需要看最低位（LSB），
+    所有位都参与处理——不再是单 bit 问题。
+
+    Returns:
+        (X_train, y_train, X_val, y_val) — 80/20 分割
+    """
+    values = np.random.randint(-2147483648, 2147483648, size=n_samples)
+
+    X = np.stack([int_to_bits(v) for v in values])
+    y = ((values % 2 == 0)).astype(np.float32).reshape(-1, 1)
+
+    split = int(0.8 * n_samples)
+    return X[:split], y[:split], X[split:], y[split:]
+
+
 # ============================================================
 #  评估
 # ============================================================
