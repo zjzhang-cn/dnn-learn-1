@@ -88,6 +88,74 @@ def generate_parity_dataset(n_samples: int = 10000):
     return X[:split], y[:split], X[split:], y[split:]
 
 
+def generate_power_of_two_dataset(n_samples: int = 10000):
+    """
+    生成"是否为 2 的幂"数据集。
+
+    标签: 1 表示是 2 的正整数次幂（1, 2, 4, 8, ...），0 表示不是。
+    与符号/奇偶判断不同，这不是单 bit 问题——网络需要计数
+    32 位输入中恰好只有 1 个 bit 为 1，其余全为 0。
+
+    正样本 = 2^0 ~ 2^30 共 31 个值，为避免类别极度不平衡，
+    正样本被重复采样至约 25%。
+
+    负样本分两类：随机采样（general）+ 困难样本（hard：2~4 个 bit 为 1
+    的小数和边界值），让模型学会区分"恰好 1 个 1"和"少量 1"。
+
+    Returns:
+        (X_train, y_train, X_val, y_val) — 80/20 分割
+    """
+    powers = [1 << i for i in range(31)]  # 2^0 ~ 2^30
+
+    n_pos = n_samples // 4
+    n_hard_neg = n_samples // 4
+    n_random_neg = n_samples // 2
+
+    # 正样本
+    pos_indices = np.random.randint(0, len(powers), size=n_pos)
+    pos_values = np.array([powers[i] for i in pos_indices])
+
+    # 困难负样本：小正数 + 边界值（2~4 个 bit 为 1）
+    # 0 和 -2^31 是特殊难点：0 有零个 1，-2^31 补码恰好一个 1（MSB）
+    hard_neg = [0] * 20 + [-2147483648] * 20  # 高频出现
+    hard_neg += [3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15,
+                 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+    # 批量补充：0~1000 中排除 powers 和已有的
+    extra = [v for v in range(0, 1000) if v not in powers and v not in hard_neg]
+    hard_neg.extend(extra[:n_hard_neg - len(hard_neg)])
+    # 若还不够，加入中等大小的随机数
+    if len(hard_neg) < n_hard_neg:
+        more = np.random.randint(0, 100000, size=n_hard_neg * 2)
+        for v in more:
+            if len(hard_neg) >= n_hard_neg:
+                break
+            if int(v) not in powers and v not in hard_neg:
+                hard_neg.append(int(v))
+    hard_neg_values = np.array(hard_neg[:n_hard_neg])
+
+    # 随机负样本
+    random_neg_values = np.random.randint(-2147483648, 2147483648, size=n_random_neg * 2)
+    power_set = set(powers)
+    hard_set = set(hard_neg_values.tolist())
+    random_neg_values = np.array([v for v in random_neg_values
+                                  if v not in power_set and v not in hard_set][:n_random_neg])
+
+    values = np.concatenate([pos_values, hard_neg_values, random_neg_values])
+    y = np.concatenate([
+        np.ones(len(pos_values), dtype=np.float32),
+        np.zeros(len(hard_neg_values) + len(random_neg_values), dtype=np.float32),
+    ])
+
+    idx = np.random.permutation(len(values))
+    values, y = values[idx], y[idx]
+
+    X = np.stack([int_to_bits(v) for v in values])
+    y = y.reshape(-1, 1)
+
+    split = int(0.8 * len(values))
+    return X[:split], y[:split], X[split:], y[split:]
+
+
 # ============================================================
 #  评估
 # ============================================================
