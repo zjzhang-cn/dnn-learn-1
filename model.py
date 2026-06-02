@@ -35,6 +35,18 @@ def int_to_bits(value: int) -> np.ndarray:
     Returns:
         shape (32,) 的 float32 数组，每个元素为 0.0 或 1.0
     """
+    # 将输入限制在32位有符号整数范围内
+    # 通过掩码操作确保只保留低32位，模拟32位整数行为
+    if value > 0x7FFFFFFF:  # 如果大于最大32位有符号整数
+        # 对于超出范围的正数，将其转换为对应的32位有符号整数表示
+        value = ((value + 0x80000000) % 0x100000000) - 0x80000000
+    elif value < -0x80000000:  # 如果小于最小32位有符号整数
+        # 对于超出范围的负数，将其转换为对应的32位有符号整数表示
+        value = ((value + 0x80000000) % 0x100000000) - 0x80000000
+    
+    # 确保值在32位有符号整数范围内
+    value = int(np.int32(value))
+    
     unsigned = value & 0xFFFFFFFF
     bits = [(unsigned >> (31 - i)) & 1 for i in range(32)]
     return np.array(bits, dtype=np.float32)

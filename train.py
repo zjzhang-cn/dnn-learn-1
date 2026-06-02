@@ -42,7 +42,8 @@ def generate_dataset(n_samples: int = 10000):
     Returns:
         (X_train, y_train, X_val, y_val) — 80/20 分割
     """
-    values = np.random.randint(-2147483648, 2147483648, size=n_samples)
+    # 修正范围为 [-2^31, 2^31-1]，即 [-2147483648, 2147483647]
+    values = np.random.randint(-2147483648, 2147483647, size=n_samples)
 
     X = np.stack([int_to_bits(v) for v in values])          # (N, 32)
     y = (values >= 0).astype(np.float32).reshape(-1, 1)     # (N, 1)
@@ -58,7 +59,8 @@ def generate_validation_data(n_samples: int = 1000):
     Returns:
         (X_val, y_val)
     """
-    values = np.random.randint(-2147483648, 2147483648, size=n_samples)
+    # 修正范围为 [-2^31, 2^31-1]，即 [-2147483648, 2147483647]
+    values = np.random.randint(-2147483648, 2147483647, size=n_samples)
 
     X = np.stack([int_to_bits(v) for v in values])
     y = (values >= 0).astype(np.float32).reshape(-1, 1)
