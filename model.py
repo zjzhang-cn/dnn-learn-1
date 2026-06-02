@@ -190,14 +190,15 @@ def export_model_to_onnx(model_path="sign_classifier.onnx", input_shape=(1, 32))
         dummy_input,
         model_path,
         export_params=True,
-        opset_version=11,
+        opset_version=14,
         do_constant_folding=True,
         input_names=['input'],
         output_names=['output'],
         dynamic_axes={
             'input': {0: 'batch_size'},
             'output': {0: 'batch_size'},
-        }
+        },
+        dynamo=False,  # 使用旧版 TorchScript 导出路径，兼容 OpenCV
     )
 
     print(f"✅ 模型已成功导出到: {model_path}")

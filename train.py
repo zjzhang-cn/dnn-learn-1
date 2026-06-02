@@ -1,7 +1,7 @@
 """
 DNN 符号分类器 - 训练脚本
 =========================
-生成训练数据，训练模型，保存权重到 sign_classifier.pth。
+生成训练数据，训练模型，保存权重到 sign_classifier.pth，导出 ONNX 模型。
 
 用法：
     python train.py
@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from model import DEVICE, SignClassifier, int_to_bits, print_model
+from model import DEVICE, SignClassifier, int_to_bits, print_model, export_model_to_onnx
 
 # ============================================================
 #  随机种子
@@ -199,6 +199,11 @@ def main():
     # 4. 保存模型
     torch.save(model.state_dict(), MODEL_PATH)
     print(f"\n模型已保存到 {MODEL_PATH}")
+
+    # 5. 导出 ONNX 模型
+    print("\n[5/5] 导出 ONNX 模型...")
+    model.to("cpu")  # ONNX 导出需要 CPU
+    export_model_to_onnx("sign_classifier.onnx")
 
 
 if __name__ == "__main__":
