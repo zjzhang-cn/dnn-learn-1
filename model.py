@@ -170,18 +170,21 @@ def analyze_with_torch_fx():
 #  ONNX 导出功能
 # ============================================================
 
-def export_model_to_onnx(model_path="sign_classifier.onnx", input_shape=(1, 32)):
+def export_model_to_onnx(model_path="sign_classifier.onnx", input_shape=(1, 32), model=None):
     """
     将模型导出为 ONNX 格式
 
     Args:
         model_path: ONNX 模型保存路径
         input_shape: 输入张量的形状 (batch_size, features)
+        model: 可选，已训练的模型实例。不传则创建未训练的新模型。
     """
     import torch.onnx
 
-    model = SignClassifier()
+    if model is None:
+        model = SignClassifier()
     model.eval()
+    model.to("cpu")
 
     dummy_input = torch.randn(input_shape)
 

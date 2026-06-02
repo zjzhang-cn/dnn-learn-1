@@ -202,8 +202,7 @@ def main():
 
     # 5. 导出 ONNX 模型
     print("\n[5/5] 导出 ONNX 模型...")
-    model.to("cpu")  # ONNX 导出需要 CPU
-    export_model_to_onnx("sign_classifier.onnx")
+    export_model_to_onnx("sign_classifier.onnx", model=model.to("cpu"))
 
 
 if __name__ == "__main__":

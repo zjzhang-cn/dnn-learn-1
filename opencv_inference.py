@@ -70,9 +70,6 @@ def main():
 
     net = load_onnx_model(args.model)
 
-    print(f"\nOpenCV 后端: {cv2.dnn.getAvailableBackends()}")
-    print(f"OpenCV 目标: {cv2.dnn.getAvailableTargets(0)}")
-
     # 测试固定样本
     print("\n" + "=" * 50)
     print("批量测试")
